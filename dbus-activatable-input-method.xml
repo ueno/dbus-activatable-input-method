@@ -1,0 +1,377 @@
+<!DOCTYPE article PUBLIC "-//OASIS//DTD DocBook XML V4.1.2//EN" "http://www.oasis-open.org/docbook/xml/4.1.2/docbookx.dtd" [
+				  ]>
+
+<article id="index">
+  <articleinfo>
+    <title>D-Bus Activatable Input Method</title>
+    <releaseinfo>Version 0.1</releaseinfo>
+    <pubdate>2 Nov 2014</pubdate>
+    <authorgroup>
+      <author>
+	<firstname>Daiki</firstname>
+	<surname>Ueno</surname>
+	<affiliation>
+	  <address>
+	    <email>dueno@src.gnome.org</email>
+	  </address>
+	</affiliation>
+      </author>
+    </authorgroup>
+    <abstract>
+      <para>
+	This article presents a simple cross-toolkit protocol to
+	support input methods, reusing the standard D-Bus activatable
+	application mechanism.  It aims at removing any specialized
+	input method frameworks, in favor of the standard mechanism.
+	<emphasis>Note: This article is a protocol sketch at the moment and
+	not meant to be any official proposal.</emphasis>
+      </para>
+    </abstract>
+  </articleinfo>
+
+  <sect1 id="introduction">
+    <title>Introduction</title>
+    <para>
+      In order to provide multilingual text input, several input
+      method frameworks have been proposed in the past, such as SCIM,
+      uim, Fcitx, and IBus.  On the other hand, the essential
+      functionalities of those frameworks largely overlap with
+      standard application management in both KDE and GNOME.  This
+      proposal tries to replace the concept of input method framework
+      with a standard mechanism, namely <ulink
+      url="http://standards.freedesktop.org/desktop-entry-spec/desktop-entry-spec-latest.html#dbus">D-Bus
+      activatable applications</ulink>.
+    </para>
+    <para>
+      A typical input method framework does the following:
+      <orderedlist>
+	<listitem><para><emphasis>Installation</emphasis>: Manage addition/removal/listing of
+	input method packages.</para></listitem>
+	<listitem><para><emphasis>Activation</emphasis>: Maintain "active" input
+	methods.</para></listitem>
+	<listitem><para><emphasis>Messaging</emphasis>: Deliver messages between
+	clients and input methods.</para></listitem>
+      </orderedlist>
+      1 is a duplicate of the standard package management.  2 can be
+      implemented as a D-Bus activatable application.  3 is peculiar to input method services and defined later in this proposal.
+    </para>
+  </sect1>
+  <sect1 id="installation">
+    <title>Installation</title>
+    <para>
+      Input methods must comply with the requirements of <ulink
+      url="http://standards.freedesktop.org/desktop-entry-spec/desktop-entry-spec-latest.html#dbus">D-Bus
+      activatable applications</ulink>.  In particular, they must
+      install <filename>.desktop</filename> files with a D-Bus
+      well-known name.
+    </para>
+    <para>
+      The <filename>.desktop</filename> files should have a
+      <varname>Implements</varname> key containing
+      <literal>org.freedesktop.InputMethod</literal> so they can be
+      distinguished from ordinary applications.
+    </para>
+  </sect1>
+  <sect1 id="activation">
+    <title>Activation</title>
+    <para>
+      On activation (in the <varname>Activate</varname> method of the
+      <literal>org.freedesktop.Application</literal> interface), input
+      methods must own the D-Bus well-known name
+      <literal>org.freedesktop.InputMethod</literal>, with the
+      <constant>DBUS_NAME_FLAG_ALLOW_REPLACEMENT</constant> flag set.
+      Clients and desktop shells can be notified when the active
+      input method has changed, through the
+      <varname>NameOwnerChanged</varname> D-Bus signal.
+    </para>
+    <para>
+      Input methods must implement the following interface (given in
+      D-Bus introspection XML format):
+    </para>
+    <programlisting>
+<![CDATA[  <interface name='org.freedesktop.InputMethod'>
+    <method name='GetAddress'>
+      <arg type='s' name='address' direction='out'/>
+    </method>
+    <method name='CreateEngine'>
+      <arg type='o' name='object_path' direction='out'/>
+      <arg type='a{sv}' name='platform_data' direction='in'/>
+    </method>
+  </interface>]]>
+    </programlisting>
+    <para>
+      The <literal>org.freedesktop.InputMethod</literal> interface is
+      responsible for the creation of input method engines, which
+      perform the succeeding communication with the clients.
+    </para>
+    <para>
+      The <literal>GetAddress</literal> method returns a D-Bus address
+      where the created engine are exported.  It may be an empty string
+      if the engines are exported on the same bus where the
+      <literal>org.freedesktop.InputMethod</literal> interface is
+      exported.
+    </para>
+    <para>
+      The <literal>CreateEngine</literal> method is called when a
+      client needs a new input method engine.  The method returns the
+      object-path which the new engine is exported at.  The
+      object-path must be in the form: starting with the well-known
+      D-Bus name of the input method, change all dots to slashes and
+      prefix a slash, append a unique identifier. For example, if the
+      well-known D-Bus name is
+      <literal>org.example.FooInputMethod</literal>, an engine's
+      object-path could be
+      <literal>/org/example/FooInputMethod/Engine1</literal>.
+    </para>
+    <para>
+      Note that once an engine is created, it may remain usable even
+      after the input method disowns the
+      <literal>org.freedesktop.InputMethod</literal> name.  That
+      allows different clients to have different input methods, by
+      ignoring <varname>NameOwnerChanged</varname> while those clients
+      don't have a focus.
+    </para>
+  </sect1>
+  <sect1 id="messaging">
+    <title>Messaging</title>
+    <para>
+      Input method engines must implement the following interface:
+    </para>
+    <programlisting>
+<![CDATA[  <interface name='org.freedesktop.InputMethod.Engine'>
+    <method name='KeyEvent'>
+      <arg type='u' name='keycode' direction='in'/>
+      <arg type='b' name='pressed' direction='in'/>
+      <arg type='b' name='handled' direction='out'/>
+    </method>
+    <method name='Focus'>
+      <arg type='b' name='focused'/>
+    </method>
+    <method name='Reset'/>
+    <method name='Destroy'/>
+    <signal name='Commit'>
+      <arg type='s' name='text'/>
+    </signal>
+    <signal name='PreeditChanged'>
+      <arg type='s' name='text'/>
+      <arg type='a(uuu)' name='styling'/>
+      <arg type='i' name='cursor_pos'/>
+    </signal>
+    <signal name='DeleteSurroundingText'>
+      <arg type='i' name='offset'/>
+      <arg type='u' name='nchars'/>
+    </signal>
+    <property name='SurroundingText' type='(suu)' access='write'/>
+    <property name='ContentType' type='(uu)' access='write'/>
+  </interface>]]>
+    </programlisting>
+    <para>
+      The <literal>KeyEvent</literal> method is called when the client
+      requests the engine to process a key event.  The method takes
+      two input arguments: a hardware keycode and a flag indicating
+      whether the key is pressed or released.  If the engine consumes
+      the key event, it returns TRUE, otherwise FALSE.
+    </para>
+    <para>
+      Note that there is no argument conveying a translated keysym
+      value nor a modifier mask.  It's an engine's responsibility to
+      keep track of the keyboard state and interpret hardware
+      keycodes.  That can be typically done with a library like <ulink
+      url="http://xkbcommon.org">libxkbcommon</ulink>.
+    </para>
+    <para>
+      The <literal>Focus</literal> and <literal>Reset</literal>
+      methods are called when the client has changed the state.
+      The engine is responsible for those changes and may behave
+      appropriately (e.g. flushing pending input).
+    </para>
+    <para>
+      The <literal>Commit</literal> signal is sent when the engine
+      wants to finish the current editing.  The signal carries a
+      string produced by the editing.
+    </para>
+    <para>
+      The <literal>PreeditChanged</literal> signal is sent when the
+      engine wants to update the preedit text displayed on the client
+      ("pre-edit" means "prior to commit").  The signal takes a
+      string, an array of styling attributes, and the cursor position.
+      A styling attribute is a tuple of three elements: a starting
+      position (in characters), an ending position (in characters,
+      exclusive), and a styling type.  Possible styling types are
+      defined as follows:
+    </para>
+    <table>
+      <title>Styling Types</title>
+      <tgroup cols="2">
+	<thead>
+	  <row>
+	    <entry>Flag</entry>
+	    <entry>Value</entry>
+	  </row>
+	</thead>
+	<tbody>
+	  <row>
+	    <entry id="styling-normal"><varname>STYLING_NORMAL</varname></entry>
+	    <entry>0</entry>
+	  </row>
+	  <row>
+	    <entry id="styling-underline"><varname>STYLING_UNDERLINE</varname></entry>
+	    <entry>1</entry>
+	  </row>
+	  <row>
+	    <entry id="styling-selected"><varname>STYLING_SELECTED</varname></entry>
+	    <entry>2</entry>
+	  </row>
+	  <row>
+	    <entry id="styling-secondary-selected"><varname>STYLING_SECONDARY_SELECTED</varname></entry>
+	    <entry>3</entry>
+	  </row>
+	</tbody>
+      </tgroup>
+    </table>
+    <para>
+      The <literal>DeleteSurroundingText</literal> signal is sent when
+      the engine wants to delete a portion of text already committed
+      to the client.  It is particularly useful for inputting in a
+      complex script which requires replacing a previously committed
+      characters with a combined character.  The signal takes two
+      arguments: an offset from the cursor, and the number of
+      characters being deleted.
+    </para>
+    <para>
+      The <literal>SurroundingText</literal> property, on the other
+      hand, is set when the text on the client has set or changed.
+      The value of the property is a tuple of three elements: a
+      string, a cursor position, and an anchor position.
+    </para>
+    <para>
+      The <literal>ContentType</literal> property is set when the
+      content type of the text on the client has set or changed.
+      Content-type is a meta-information about how the text is treated
+      by the application.  The value of the property is a tuple of two
+      elements: a purpose (an enumeration value) and a bitmask of
+      hints.  Possible purposes are defined as follows:
+    </para>
+    <table>
+      <title>Purposes</title>
+      <tgroup cols="2">
+	<thead>
+	  <row>
+	    <entry>Flag</entry>
+	    <entry>Value</entry>
+	  </row>
+	</thead>
+	<tbody>
+	  <row>
+	    <entry id="purpose-free-form"><varname>PURPOSE_FREE_FORM</varname></entry>
+	    <entry>0</entry>
+	  </row>
+	  <row>
+	    <entry id="purpose-alpha"><varname>PURPOSE_ALPHA</varname></entry>
+	    <entry>1</entry>
+	  </row>
+	  <row>
+	    <entry id="purpose-digits"><varname>PURPOSE_DIGITS</varname></entry>
+	    <entry>2</entry>
+	  </row>
+	  <row>
+	    <entry id="purpose-number"><varname>PURPOSE_NUMBER</varname></entry>
+	    <entry>3</entry>
+	  </row>
+	  <row>
+	    <entry id="purpose-phone"><varname>PURPOSE_PHONE</varname></entry>
+	    <entry>4</entry>
+	  </row>
+	  <row>
+	    <entry id="purpose-url"><varname>PURPOSE_URL</varname></entry>
+	    <entry>5</entry>
+	  </row>
+	  <row>
+	    <entry id="purpose-email"><varname>PURPOSE_EMAIL</varname></entry>
+	    <entry>6</entry>
+	  </row>
+	  <row>
+	    <entry id="purpose-name"><varname>PURPOSE_NAME</varname></entry>
+	    <entry>7</entry>
+	  </row>
+	  <row>
+	    <entry id="purpose-password"><varname>PURPOSE_PASSWORD</varname></entry>
+	    <entry>8</entry>
+	  </row>
+	  <row>
+	    <entry id="purpose-pin"><varname>PURPOSE_PIN</varname></entry>
+	    <entry>9</entry>
+	  </row>
+	</tbody>
+      </tgroup>
+    </table>
+    <para>
+      Possible hints are defined as follows.  Multiple hints can be
+      set in a bitmask, as a bitwise OR.
+    </para>
+    <table>
+      <title>Hints</title>
+      <tgroup cols="2">
+	<thead>
+	  <row>
+	    <entry>Flag</entry>
+	    <entry>Value</entry>
+	  </row>
+	</thead>
+	<tbody>
+	  <row>
+	    <entry id="hint-none"><varname>HINT_NONE</varname></entry>
+	    <entry>0</entry>
+	  </row>
+	  <row>
+	    <entry id="hint-spellcheck"><varname>HINT_SPELLCHECK</varname></entry>
+	    <entry>1</entry>
+	  </row>
+	  <row>
+	    <entry id="hint-no-spellcheck"><varname>HINT_NO_SPELLCHECK</varname></entry>
+	    <entry>2</entry>
+	  </row>
+	  <row>
+	    <entry id="hint-word-completion"><varname>HINT_WORD_COMPLETION</varname></entry>
+	    <entry>4</entry>
+	  </row>
+	  <row>
+	    <entry id="hint-lowercase"><varname>HINT_LOWERCASE</varname></entry>
+	    <entry>8</entry>
+	  </row>
+	  <row>
+	    <entry id="hint-uppercase-chars"><varname>HINT_UPPERCASE_CHARS</varname></entry>
+	    <entry>16</entry>
+	  </row>
+	  <row>
+	    <entry id="hint-uppercase-words"><varname>HINT_UPPERCASE_WORDS</varname></entry>
+	    <entry>32</entry>
+	  </row>
+	  <row>
+	    <entry id="hint-uppercase-sentences"><varname>HINT_UPPERCASE_SENTENCES</varname></entry>
+	    <entry>64</entry>
+	  </row>
+	  <row>
+	    <entry id="hint-inhibit-osk"><varname>HINT_INHIBIT_OSK</varname></entry>
+	    <entry>128</entry>
+	  </row>
+	</tbody>
+      </tgroup>
+    </table>
+    <para>
+      The <literal>Destroy</literal> method is called when the client
+      explicitly destroys the engine.  After the call, the engine is
+      no longer usable.  The engine can also be destroyed when the
+      peer client is disconnected from the D-Bus session.
+    </para>
+  </sect1>
+  <sect1 id="note">
+    <title>Note</title>
+    <itemizedlist>
+      <listitem><para>The system keymap is out of scope of this proposal.  Usually input methods are not affected by the change of system keymaps.</para></listitem>
+      <listitem><para>Per-engine menus are out of scope of this proposal.  There are efficient ways to implement them, such as <ulink url="https://developer.gnome.org/gio/stable/GMenuModel.html">GMenuModel</ulink>.</para></listitem>
+      <listitem><para>Candidate list windows are also out of scope of this proposal.  They can be implemented as a separate D-Bus service provided by the entity that knows where/how to place the overlay window, such as a desktop shell or a toolkit.</para></listitem>
+      <listitem><para>Settings are also out of scopo of this proposal.  Input methods can directly use <ulink url="https://developer.gnome.org/gio/stable/settings.html">GSettings</ulink> or whatever.</para></listitem>
+    </itemizedlist>
+  </sect1>
+</article>
