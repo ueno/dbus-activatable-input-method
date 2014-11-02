@@ -128,8 +128,8 @@
       after the input method disowns the
       <literal>org.freedesktop.InputMethod</literal> name.  That
       allows different clients to have different input methods, by
-      ignoring <varname>NameOwnerChanged</varname> while those clients
-      don't have a focus.
+      ignoring the <varname>NameOwnerChanged</varname> signal when
+      those clients don't have a focus.
     </para>
   </sect1>
   <sect1 id="messaging">
