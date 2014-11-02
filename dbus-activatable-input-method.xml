@@ -20,9 +20,9 @@
     <abstract>
       <para>
 	This article presents a simple cross-toolkit protocol for
-	input methods, reusing the standard D-Bus activatable
-	application mechanism.  It aims at removing any specialized
-	input method frameworks, in favor of the standard mechanism.
+	input methods, based on the standard D-Bus activation
+	facility.  It aims at removing any specialized input method
+	frameworks, in favor of the standard mechanism.
 	<emphasis>Note: This article is a protocol sketch at the
 	moment and not meant to be any official proposal.</emphasis>
       </para>
