@@ -368,10 +368,10 @@
   <sect1 id="note">
     <title>Note</title>
     <itemizedlist>
-      <listitem><para>The system keymap is out of scope of this proposal.  Usually input methods are not affected by the change of system keymaps.</para></listitem>
+      <listitem><para>The system keymap is out of scope of this proposal.  Input methods are usually not affected by the change of system keymaps.</para></listitem>
       <listitem><para>Per-engine menus are out of scope of this proposal.  There are efficient ways to implement them, such as <ulink url="https://developer.gnome.org/gio/stable/GMenuModel.html">GMenuModel</ulink>.</para></listitem>
-      <listitem><para>Candidate list windows are also out of scope of this proposal.  They can be implemented as a separate D-Bus service provided by the entity that knows where/how to place the overlay window, such as a desktop shell or a toolkit.</para></listitem>
-      <listitem><para>Settings are also out of scopo of this proposal.  Input methods can directly use <ulink url="https://developer.gnome.org/gio/stable/settings.html">GSettings</ulink> or whatever.</para></listitem>
+      <listitem><para>Candidate list windows are out of scope of this proposal.  They can be implemented as a separate D-Bus service provided by the entity that knows where/how to place the overlay window, such as a desktop shell or a toolkit.</para></listitem>
+      <listitem><para>Settings are out of scope of this proposal.  Input methods can directly use <ulink url="https://developer.gnome.org/gio/stable/settings.html">GSettings</ulink> or whatever.</para></listitem>
     </itemizedlist>
   </sect1>
 </article>
