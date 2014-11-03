@@ -4,8 +4,8 @@
 <article id="index">
   <articleinfo>
     <title>D-Bus Activatable Input Method</title>
-    <releaseinfo>Version 0.1</releaseinfo>
-    <pubdate>2 Nov 2014</pubdate>
+    <releaseinfo>Version 0.2</releaseinfo>
+    <pubdate>3 Nov 2014</pubdate>
     <authorgroup>
       <author>
 	<firstname>Daiki</firstname>
@@ -148,6 +148,15 @@
       <arg type='b' name='focused'/>
     </method>
     <method name='Reset'/>
+    <method name='SetSurroundingText'>
+      <arg type='s' name='text' direction='in'/>
+      <arg type='u' name='cursor_pos' direction='in'/>
+      <arg type='u' name='anchor_pos' direction='in'/>
+    </method>
+    <method name='SetContentType'>
+      <arg type='u' name='purpose' direction='in'/>
+      <arg type='u' name='hints' direction='in'/>
+    </method>
     <method name='Destroy'/>
     <signal name='Commit'>
       <arg type='s' name='text'/>
@@ -161,16 +170,14 @@
       <arg type='i' name='offset'/>
       <arg type='u' name='nchars'/>
     </signal>
-    <property name='SurroundingText' type='(suu)' access='write'/>
-    <property name='ContentType' type='(uu)' access='write'/>
   </interface>]]>
     </programlisting>
     <para>
-      The <literal>KeyEvent</literal> method is called when the client
-      requests the engine to process a key event.  The method takes
-      two input arguments: a hardware keycode and a flag indicating
-      whether the key is pressed or released.  If the engine consumes
-      the key event, it returns TRUE, otherwise FALSE.
+      The <literal>KeyEvent</literal> method is called by the client
+      when it requests the engine to process a key event.  The method
+      takes two input arguments: a hardware keycode and a flag
+      indicating whether the key is pressed or released.  If the
+      engine consumes the key event, it returns TRUE, otherwise FALSE.
     </para>
     <para>
       Note that there is no argument conveying a translated keysym
@@ -181,76 +188,26 @@
     </para>
     <para>
       The <literal>Focus</literal> and <literal>Reset</literal>
-      methods are called when the client has changed the state.
+      methods are called by the client when it has changed the state.
       The engine is responsible for those changes and may behave
       appropriately (e.g. flushing pending input).
     </para>
     <para>
-      The <literal>Commit</literal> signal is sent when the engine
-      wants to finish the current editing.  The signal carries a
-      string produced by the editing.
+      The <literal>SetSurroundingText</literal> method is called by
+      the client when the text around cursor (surrounding text) has
+      changed.  This is particularly useful for inputting in a complex
+      script which requires replacing a previously committed
+      characters with a combined character.
+      This method takes three input arguments: a string, a cursor
+      position, and an anchor position.
     </para>
     <para>
-      The <literal>PreeditChanged</literal> signal is sent when the
-      engine wants to update the preedit text displayed on the client
-      ("pre-edit" means "prior to commit").  The signal takes a
-      string, an array of styling attributes, and the cursor position.
-      A styling attribute is a tuple of three elements: a starting
-      position (in characters), an ending position (in characters,
-      exclusive), and a styling type.  Possible styling types are
-      defined as follows:
-    </para>
-    <table>
-      <title>Styling Types</title>
-      <tgroup cols="2">
-	<thead>
-	  <row>
-	    <entry>Flag</entry>
-	    <entry>Value</entry>
-	  </row>
-	</thead>
-	<tbody>
-	  <row>
-	    <entry id="styling-normal"><varname>STYLING_NORMAL</varname></entry>
-	    <entry>0</entry>
-	  </row>
-	  <row>
-	    <entry id="styling-underline"><varname>STYLING_UNDERLINE</varname></entry>
-	    <entry>1</entry>
-	  </row>
-	  <row>
-	    <entry id="styling-selected"><varname>STYLING_SELECTED</varname></entry>
-	    <entry>2</entry>
-	  </row>
-	  <row>
-	    <entry id="styling-secondary-selected"><varname>STYLING_SECONDARY_SELECTED</varname></entry>
-	    <entry>3</entry>
-	  </row>
-	</tbody>
-      </tgroup>
-    </table>
-    <para>
-      The <literal>DeleteSurroundingText</literal> signal is sent when
-      the engine wants to delete a portion of text already committed
-      to the client.  It is particularly useful for inputting in a
-      complex script which requires replacing a previously committed
-      characters with a combined character.  The signal takes two
-      arguments: an offset from the cursor, and the number of
-      characters being deleted.
-    </para>
-    <para>
-      The <literal>SurroundingText</literal> property, on the other
-      hand, is set when the text on the client has set or changed.
-      The value of the property is a tuple of three elements: a
-      string, a cursor position, and an anchor position.
-    </para>
-    <para>
-      The <literal>ContentType</literal> property is set when the
-      content type of the text on the client has set or changed.
+      The <literal>SetContentType</literal> method is called by the
+      client when the content type of the text has changed.
       Content-type is a meta-information about how the text is treated
-      by the application.  The value of the property is a tuple of two
-      elements: a purpose (an enumeration value) and a bitmask of
-      hints.  Possible purposes are defined as follows:
+      by the client.  This method takes two input arguments: a purpose
+      (an enumeration value) and a bitmask of hints.  Possible
+      purposes are defined as follows:
     </para>
     <table>
       <title>Purposes</title>
@@ -359,10 +316,61 @@
       </tgroup>
     </table>
     <para>
-      The <literal>Destroy</literal> method is called when the client
-      explicitly destroys the engine.  After the call, the engine is
-      no longer usable.  The engine can also be destroyed when the
-      peer client is disconnected from the D-Bus session.
+      The <literal>Destroy</literal> method is called by the client
+      when it explicitly destroys the engine.  After the call, the
+      engine is no longer usable.  The engine can also be destroyed
+      when the peer client is disconnected from the D-Bus session.
+    </para>
+    <para>
+      The <literal>Commit</literal> signal is emitted by the engine
+      when it wants to finish the current editing.  The signal carries
+      a string produced by the editing.
+    </para>
+    <para>
+      The <literal>PreeditChanged</literal> signal is emitted by the
+      engine when it wants to update the preedit text displayed on the
+      client ("pre-edit" means "prior to commit").  The signal takes a
+      string, an array of styling attributes, and the cursor position.
+      A styling attribute is a tuple of three elements: a starting
+      position (in characters), an ending position (in characters,
+      exclusive), and a styling type.  Possible styling types are
+      defined as follows:
+    </para>
+    <table>
+      <title>Styling Types</title>
+      <tgroup cols="2">
+	<thead>
+	  <row>
+	    <entry>Flag</entry>
+	    <entry>Value</entry>
+	  </row>
+	</thead>
+	<tbody>
+	  <row>
+	    <entry id="styling-normal"><varname>STYLING_NORMAL</varname></entry>
+	    <entry>0</entry>
+	  </row>
+	  <row>
+	    <entry id="styling-underline"><varname>STYLING_UNDERLINE</varname></entry>
+	    <entry>1</entry>
+	  </row>
+	  <row>
+	    <entry id="styling-selected"><varname>STYLING_SELECTED</varname></entry>
+	    <entry>2</entry>
+	  </row>
+	  <row>
+	    <entry id="styling-secondary-selected"><varname>STYLING_SECONDARY_SELECTED</varname></entry>
+	    <entry>3</entry>
+	  </row>
+	</tbody>
+      </tgroup>
+    </table>
+    <para>
+      The <literal>DeleteSurroundingText</literal> signal is emitted
+      by the engine when it wants to delete a portion of text already
+      committed to the client.  The signal takes two arguments: an
+      offset from the cursor, and the number of characters being
+      deleted.
     </para>
   </sect1>
   <sect1 id="note">
