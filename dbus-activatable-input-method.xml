@@ -401,19 +401,28 @@
   </interface>]]>
     </programlisting>
     <para>
-      The object-path of a candidate list must be in the form: append
-      <literal>/CandidateList</literal> to the engine's
+      Note that only one candidate list can be exported from an
+      engine.  The object-path of a candidate list must be in the
+      form: append <literal>/CandidateList</literal> to the engine's
       object-path. For example, if the engine's object-path is
       <literal>/org/example/FooInputMethod/Engine1</literal>, the
       candidate list's object-path will be
       <literal>/org/example/FooInputMethod/Engine1/CandidateList</literal>.
     </para>
     <para>
+      Since a candidate list is often large, the interface is designed
+      to be capable of accommodating infinite number of candidates.
+      An engine is supposed to feed new candidates as a page, when
+      requested by the client.
+    </para>
+    <para>
       The <literal>Start</literal> method is called when the client is
       interested in the content of the candidate list.  This method
       returns two parameters: the number of pages in the candidate
-      list, and a list of labels.  This method has a side-effect that
-      triggers the initial <literal>PageChanged</literal> and
+      list, and a list of labels.  The number of candidates in a page
+      is determined from the length of the labels list.  This method
+      has a side-effect that triggers the initial
+      <literal>PageChanged</literal> and
       <literal>SelectionChanged</literal> signals are emitted.
     </para>
     <para>
