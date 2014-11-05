@@ -401,10 +401,9 @@
   </interface>]]>
     </programlisting>
     <para>
-      The object-path of a candidate list must be in the form:
-      starting with the object-path of the engine, append
-      <literal>/CandidateList</literal>. For example, if the engine's
-      object-path is
+      The object-path of a candidate list must be in the form: append
+      <literal>/CandidateList</literal> to the engine's
+      object-path. For example, if the engine's object-path is
       <literal>/org/example/FooInputMethod/Engine1</literal>, the
       candidate list's object-path will be
       <literal>/org/example/FooInputMethod/Engine1/CandidateList</literal>.
@@ -436,7 +435,7 @@
     <title>Note</title>
     <itemizedlist>
       <listitem><para>The system keymap is out of scope of this proposal.  Input methods are usually not affected by the change of system keymaps.</para></listitem>
-      <listitem><para>Per-engine menus are out of scope of this proposal.  There are efficient ways to implement them, such as <ulink url="https://developer.gnome.org/gio/stable/GMenuModel.html">GMenuModel</ulink>.</para></listitem>
+      <listitem><para>Per-engine menus are out of scope of this proposal.  There are efficient ways to implement them, such as <ulink url="https://wiki.gnome.org/Projects/GLib/GApplication/DBusAPI#org.gtk.Menus">GMenuModel D-Bus API</ulink>.</para></listitem>
       <listitem><para>The placement of a candidate list window is out of scope of this proposal.  It can be implemented by a desktop shell or a toolkit.</para></listitem>
       <listitem><para>Settings are out of scope of this proposal.  Input methods can directly use <ulink url="https://developer.gnome.org/gio/stable/settings.html">GSettings</ulink> or whatever.</para></listitem>
     </itemizedlist>
