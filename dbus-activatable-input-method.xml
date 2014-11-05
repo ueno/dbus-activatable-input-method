@@ -4,8 +4,8 @@
 <article id="index">
   <articleinfo>
     <title>D-Bus Activatable Input Method</title>
-    <releaseinfo>Version 0.2</releaseinfo>
-    <pubdate>3 Nov 2014</pubdate>
+    <releaseinfo>Version 0.3</releaseinfo>
+    <pubdate>5 Nov 2014</pubdate>
     <authorgroup>
       <author>
 	<firstname>Daiki</firstname>
@@ -106,7 +106,7 @@
     </para>
     <para>
       The <literal>GetAddress</literal> method returns a D-Bus address
-      where the created engine are exported.  It may be an empty string
+      where the created engine is exported.  It may be an empty string
       if the engines are exported on the same bus where the
       <literal>org.freedesktop.InputMethod</literal> interface is
       exported.
@@ -169,6 +169,9 @@
     <signal name='DeleteSurroundingText'>
       <arg type='i' name='offset'/>
       <arg type='u' name='nchars'/>
+    </signal>
+    <signal name='SetCandidateListVisible'>
+      <arg type='b' name='visible'/>
     </signal>
   </interface>]]>
     </programlisting>
@@ -372,13 +375,69 @@
       offset from the cursor, and the number of characters being
       deleted.
     </para>
+    <para>
+      The <literal>SetCandidateListVisible</literal> signal is emitted
+      by the engine when it has changed the visibility of a candidate
+      list window.
+    </para>
+    <para>
+      Input method engines may optionally implement the following
+      interface for a candidate list:
+    </para>
+    <programlisting>
+<![CDATA[  <interface name='org.freedesktop.InputMethod.CandidateList'>
+    <method name='Start'>
+      <arg type='u' name='npages' direction='out'/>
+      <arg type='as' name='labels' direction='out'/>
+    </method>
+    <method name='End'/>
+    <signal name='PageChanged'>
+      <arg type='u' name='page'/>
+      <arg type='as' name='content'/>
+    </signal>
+    <signal name='SelectionChanged'>
+      <arg type='i' name='index'/>
+    </signal>
+  </interface>]]>
+    </programlisting>
+    <para>
+      The object-path of a candidate list must be in the form:
+      starting with the object-path of the engine, append
+      <literal>/CandidateList</literal>. For example, if the engine's
+      object-path is
+      <literal>/org/example/FooInputMethod/Engine1</literal>, the
+      candidate list's object-path will be
+      <literal>/org/example/FooInputMethod/Engine1/CandidateList</literal>.
+    </para>
+    <para>
+      The <literal>Start</literal> method is called when the client is
+      interested in the content of the candidate list.  This method
+      returns two parameters: the number of pages in the candidate
+      list, and a list of labels.  This method has a side-effect that
+      triggers the initial <literal>PageChanged</literal> and
+      <literal>SelectionChanged</literal> signals are emitted.
+    </para>
+    <para>
+      The <literal>End</literal> method is called when the client is
+      no longer interested in the candidate list.
+    </para>
+    <para>
+      The <literal>PageChanged</literal> signal is emitted by the
+      engine when a page transition happens.  It takes two arguments:
+      the page index and a list of candidates.
+    </para>
+    <para>
+      The <literal>SelectionChanged</literal> signal is emitted by the
+      engine when the selection on the page has changed.  It takes an
+      argument indicating the index of the selected candidate in the page.
+    </para>
   </sect1>
   <sect1 id="note">
     <title>Note</title>
     <itemizedlist>
       <listitem><para>The system keymap is out of scope of this proposal.  Input methods are usually not affected by the change of system keymaps.</para></listitem>
       <listitem><para>Per-engine menus are out of scope of this proposal.  There are efficient ways to implement them, such as <ulink url="https://developer.gnome.org/gio/stable/GMenuModel.html">GMenuModel</ulink>.</para></listitem>
-      <listitem><para>Candidate list windows are out of scope of this proposal.  They can be implemented as a separate D-Bus service provided by the entity that knows where/how to place the overlay window, such as a desktop shell or a toolkit.</para></listitem>
+      <listitem><para>The placement of a candidate list window is out of scope of this proposal.  It can be implemented by a desktop shell or a toolkit.</para></listitem>
       <listitem><para>Settings are out of scope of this proposal.  Input methods can directly use <ulink url="https://developer.gnome.org/gio/stable/settings.html">GSettings</ulink> or whatever.</para></listitem>
     </itemizedlist>
   </sect1>
